@@ -1,5 +1,6 @@
 import random
 import time
+from art import text2art
 
 
 class Hand:
@@ -12,6 +13,8 @@ class Hand:
 
 
 def welcome():
+    title = text2art("BLACKJACK")
+    print(title)
     print("Welcome to the BlackJack Game")
     print("If you decide to play, you will start with a balance of $10,000\n")
     print("Enter the number corresponding to the choice you want to make")
@@ -23,6 +26,23 @@ def welcome():
     return choice
 
 
+def draw_card(hand, player): #player: 0 = Dealer, 1 = Player
+    cards = [('2', 2), ('3', 3), ('4', 4), ('5', 5), ('6', 6), ('7', 7), ('8', 8), ('9', 9), ('10', 10), ('J', 10), ('Q', 10), ('K', 10), ('A', 11)]
+
+    new_card = random.choice(cards)
+    if player == 0:
+        hand.d_hand.append(new_card)
+        hand.d_total += new_card[1]
+    else:
+        hand.p_hand.append(new_card)
+        hand.p_total += new_card[1]
+        if new_card[0] == 'A':
+            hand.p_aces += 1
+        
+        if hand.p_total > 21 and hand.p_aces > 0:
+            hand.p_total -= 10
+            hand.p_aces -= 1
+
 
 def place_bet(balance):
     bet = 99
@@ -31,7 +51,8 @@ def place_bet(balance):
     print(f"Current Balance:\t{balance}")
     print()
     print(f"You can bet in $100 increments between $100-{balance}")
-    print("(If bet is within valid range but not in correct increments, it will be rounded down)")
+    print("Note: If you lose the hand you will lose the bet, if you win the hand you will recieve the value of the bet from the dealer")
+    print("\n(If bet is within valid range but not in correct increments, it will be rounded down)")
 
     while bet < 100 or bet > balance:
         bet = int(input("Type in bet and press enter: $"))
@@ -40,8 +61,6 @@ def place_bet(balance):
             print(f"You don't have that much money too bet. Bet an amount less than or equal too your balance: {balance}")
         elif bet < 100:
             print(f"Bet must be at least $100.")
-        
-
 
     bet = bet // 100
     bet = bet * 100
@@ -52,44 +71,37 @@ def place_bet(balance):
 
 def dealing(bet):
 
-    # Card options
-    cards = [('2', 2), ('3', 3), ('4', 4), ('5', 5), ('6', 6), ('7', 7), ('8', 8), ('9', 9), ('10', 10), ('J', 10), ('Q', 10), ('K', 10), ('A', 11)]
-
     # Initial hands
     hand = Hand()
+
+    print("\n\n--- Rules ----------------------------------------------------------------")
+    print("1. You and the dealer will both be dealt 2 cards but you will only be able to see one of the dealers cards")
+    print("2. You will then decide whether to \"Hit\" (draw an additional card), or \"Stand\" (stick with the cards you have)")
+    print("\t - The goal is to get the highes sum possible, without going over 21. If you go over 21 you bust and lose the hand.")
+    print("\t\t(Card values are shown below)")
+    print("3. The dealer will now draw their cards until they reach at least 17.")
+    print("\t - If the dealer goes over 21, they bust and you win.")
+    print("4. If neither of you went over 21, whoever has the greater sum will win the hand and the bet value. If you tie you will get your bet back.")
+    print("\n--- Card Values -------------------------")
+    print("(Card: Value)")
+    print("Numbered cards: The value of their number")
+    print("Face Cards: 10")
+    print("Ace: 11 or 1 (It will have the value 11 until you go over 21, and then it's value will drop to 1)")
 
     print("\n\n--- DEALING --------------------------------------------------------------")
     print(f"Bet: ${bet}")
 
     for i in range(4):
         print(f"\n--- CARD {i + 1} ------------------------------")
-        new_card = random.choice(cards)
         if i % 2 == 0: # Remainder
-            hand.d_hand.append(new_card)
-            hand.d_total += new_card[1]
+            draw_card(hand, 0)
         else:
-            hand.p_hand.append(new_card)
-            hand.p_total += new_card[1]
-            if new_card[0] == 'A':
-                hand.p_aces += 1
+            draw_card(hand, 1)
         
-        # Print current hands
-        if len(hand.p_hand) > 0:
-            print("Your Cards:\t\t", ", ".join(card[0] for card in hand.p_hand))
-        else:
-            print("Your Cards:")
+        dealing_print_hands(hand)
         
-        if len(hand.d_hand) < 2:
-            print("Dealer's Cards:\t\t ?")
-        if len(hand.d_hand) == 2:
-            print(f"Dealer's Cards:\t\t ?, {hand.d_hand[1][0]}")
-        
-        # Wait 1 second before the next tick
+        # Wait 2 second before the next card
         time.sleep(2)
-
-    if hand.p_total > 21 and hand.p_aces > 0:
-        hand.p_total -= 10
-        hand.p_aces -= 1
 
     if hand.p_total == 21:
         print("\nBLACKJACK!!!!!")
@@ -98,16 +110,16 @@ def dealing(bet):
 
     print(f"\nYour total: \t\t{hand.p_total} \nDealer's Total: \t\t?")
 
-    hand = decision(cards, hand)
+    hand = decision(hand)
 
     if hand.p_total < 22:
         print("Dealer's Cards:\t\t", ", ".join(card[0] for card in hand.d_hand))
-        print(f"Dealer's Total: \t\t{hand.d_total}")
+        print(f"Dealer's Total:\t\t{hand.d_total}")
 
         time.sleep(2)
 
         if hand.d_total < 17:
-            hand = finish_dealer(cards, hand)
+            hand = finish_dealer(hand)
 
     result = None # 0 - Loss, 1 - Tie, 2 - Win
     if hand.p_total > 21 or (hand.d_total < 22 and hand.d_total > hand.p_total):
@@ -122,7 +134,25 @@ def dealing(bet):
     return result
 
 
-def decision(cards, hand):
+
+
+
+def dealing_print_hands(hand):
+    if len(hand.p_hand) > 0:
+        print("Your Cards:\t\t", ", ".join(card[0] for card in hand.p_hand))
+    else:
+        print("Your Cards:")
+    
+    if len(hand.d_hand) < 2:
+        print("Dealer's Cards:\t\t ?")
+    if len(hand.d_hand) == 2:
+        print(f"Dealer's Cards:\t\t ?, {hand.d_hand[1][0]}")
+
+
+
+
+
+def decision(hand):
     
     print("\n\n--- Decision Time ---------------------------------------------------------------------\n")
     
@@ -148,20 +178,12 @@ def decision(cards, hand):
                 print("Choice must be 1 or 2, please try again.")
         
         if choice == 1:
-            new_card = random.choice(cards)
-            hand.p_hand.append(new_card)
-            hand.p_total += new_card[1]
-            if new_card[0] == 'A':
-                hand.p_aces += 1            
+            draw_card(hand, 1)            
 
             print(f"\n--- NEW CARD ---------------------------")
             print("Your Cards:\t\t", ", ".join(card[0] for card in hand.p_hand))
-
-            if hand.p_total > 21 and hand.p_aces > 0:
-                hand.p_total -= 10
-                hand.p_aces -= 1
-
             print(f"\nYour Total: \t\t{hand.p_total}\n")
+
             if hand.p_total > 21:
                 print("Waaamp Waaaaamp Waaaaaaaaamp :( \nYOU BUST!")
                 stop = 1
@@ -173,15 +195,13 @@ def decision(cards, hand):
     return hand
 
 
-def finish_dealer(cards, hand):
+def finish_dealer(hand):
     while hand.d_total < 17:
-        new_card = random.choice(cards)
-        hand.d_hand.append(new_card)
-        hand.d_total += new_card[1]
+        draw_card(hand, 0)
         print(f"\n--- NEW CARD ---------------------------")
         time.sleep(2)
         print("Dealer's Cards:\t\t", ", ".join(card[0] for card in hand.d_hand))
-        print(f"\nDealer's Total: \t\t{hand.d_total}\n")
+        print(f"\nDealer's Total:\t\t{hand.d_total}\n")
         
 
     if hand.d_total > 21:
